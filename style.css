@@ -58,11 +58,11 @@ body {
     align-items: center; 
     justify-content: center; 
     background: radial-gradient(circle, #1a1a1c 0%, #0a0a0c 100%); 
-    overflow: hidden; 
+    overflow: hidden;
     position: relative;
 }
 
-/* KANVAS CETAK 4R (DISET TENGAH SEMPURNA) */
+/* KANVAS PRESTISIUS RASIO 4R (1200x1800) */
 .canvas-print {
     position: relative;
     width: 1200px;
@@ -101,7 +101,7 @@ body {
 
 .photo-box:hover .remove-photo-btn { display: flex; }
 
-/* --- MANAJEMEN CETAK (4R) --- */
+/* --- SETTING PRINT EPSON L8050 (4R) --- */
 @media print {
     @page {
         size: 102mm 152mm;
