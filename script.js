@@ -6,7 +6,7 @@ let activeImg = null;
 let isDragging = false;
 let startX, startY, initX, initY;
 
-// SCAN TEMPLATE ENGINE - FIXED
+// SCAN TEMPLATE ENGINE
 document.getElementById('magicScan').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -25,7 +25,7 @@ document.getElementById('magicScan').addEventListener('change', function(e) {
     img.src = url;
 });
 
-// DETEKSI AREA TRANSPARAN - FIXED (Inisialisasi data pixel & array pelacak)
+// PEMINDAI TRANSPARANSI (MENGGUNAKAN GETIMAGEDATA)
 function detectTransparentAreas(imgSource) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -37,7 +37,6 @@ function detectTransparentAreas(imgSource) {
     const WIDTH = canvas.width;
     const HEIGHT = canvas.height;
 
-    // Ambil data piksel RGBA untuk mendeteksi transparansi (Alpha channel)
     const imgData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
     const pixelData = imgData.data;
     const visited = new Uint8Array(WIDTH * HEIGHT);
@@ -46,7 +45,6 @@ function detectTransparentAreas(imgSource) {
         for (let x = 0; x < WIDTH; x += 4) {
             const idx = (y * WIDTH + x) * 4;
             
-            // Jika piksel transparan (Alpha < 50) dan belum dikunjungi
             if (pixelData[idx + 3] < 50 && !visited[y * WIDTH + x]) {
                 let xMin = x, xMax = x, yMin = y, yMax = y;
                 let stack = [[x, y]];
@@ -169,7 +167,7 @@ function applyStyles() {
     activeImg.style.filter = `brightness(${d.bright}%) contrast(${d.contrast}%) saturate(${d.sat}%)`;
 }
 
-// DRAG SYSTEM
+// SISTEM SERET (DRAG) GAMBAR
 window.addEventListener('mousedown', (e) => {
     if (e.target.classList.contains('remove-photo-btn')) return;
     if (e.target.tagName === 'IMG' && e.target.parentElement.classList.contains('photo-box')) {
@@ -192,7 +190,7 @@ window.addEventListener('mousemove', (e) => {
 
 window.addEventListener('mouseup', () => isDragging = false);
 
-// PRINT ENGINE - FIXED
+// MESIN CETAK
 document.getElementById('printBtn').onclick = () => {
     document.querySelectorAll('.photo-box').forEach(b => b.style.outline = 'none');
     setTimeout(() => {
@@ -200,7 +198,7 @@ document.getElementById('printBtn').onclick = () => {
     }, 500);
 };
 
-// DOWNLOAD ENGINE - FIXED
+// MESIN UNDUH RESOLUSI HD
 document.getElementById('downloadBtn').onclick = () => {
     const btn = document.getElementById('downloadBtn');
     btn.innerText = 'PROCESSING...';
