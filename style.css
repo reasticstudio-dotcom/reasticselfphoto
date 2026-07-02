@@ -1,111 +1,38 @@
-:root {
-    --bg-main: #0a0a0c;
-    --bg-side: #121214;
-    --accent: #00ff88;
-    --text: #ffffff;
-    --danger: #ff4757;
+/* --- TAMPILAN VIEWPORT / AREA TENGAH --- */
+.viewport { 
+    flex: 1; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    background: radial-gradient(circle, #1a1a1c 0%, #0a0a0c 100%); 
+    overflow: hidden; /* Mencegah scrollbar liar */
+    position: relative;
 }
 
-body {
-    background-color: var(--bg-main);
-    color: var(--text);
-    font-family: 'Inter', sans-serif;
-    margin: 0;
-    overflow: hidden;
-}
-
-.app-wrapper { display: flex; height: 100vh; }
-
-.sidebar {
-    width: 320px;
-    background: var(--bg-side);
-    padding: 24px;
-    border-right: 1px solid #222;
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
-}
-
-.brand h1 { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: -1px; }
-.brand h1 span { color: var(--accent); }
-.brand p { margin: 4px 0 0; font-size: 10px; color: #666; letter-spacing: 1px; text-transform: uppercase; }
-
-.section-title { font-size: 10px; font-weight: 700; color: #444; letter-spacing: 2px; display: block; margin-bottom: 12px; }
-
-.upload-label {
-    display: flex; align-items: center; justify-content: center;
-    background: #1a1a1c; border: 1px solid #333;
-    padding: 15px; border-radius: 8px; cursor: pointer; transition: 0.3s;
-}
-
-.action-buttons { display: flex; flex-direction: column; gap: 10px; }
-
-.primary-btn, .print-btn {
-    width: 100%; padding: 15px; border: none; border-radius: 8px; 
-    font-weight: 800; cursor: pointer; transition: 0.2s;
-}
-
-.primary-btn { background: var(--accent); color: #000; }
-.print-btn { background: #ffffff; color: #000; }
-.print-btn:hover { background: #e0e0e0; }
-
-.viewport { flex: 1; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, #1a1a1c 0%, #0a0a0c 100%); overflow: auto; }
-
-/* PERBAIKAN SINTAKS CANVAS-PRINT */
+/* --- PERBAIKAN CANVAS PRINT --- */
 .canvas-print {
     position: relative;
     width: 1200px;
     height: 1800px;
-    transform: scale(0.32);
-    transform-origin: center center; /* Diubah ke center agar posisinya pas di tengah viewport */
     background: #fff;
     box-shadow: 0 50px 100px -20px rgba(0,0,0,0.7);
+    
+    /* PERBAIKAN UTAMA: Skala diperkecil dengan poros pas di tengah */
+    transform: scale(0.35); 
+    transform-origin: center center;
+    flex-shrink: 0; /* Memaksa browser mempertahankan ukuran asli sebelum discale */
 }
 
 #photoContainer { position: absolute; inset: 0; z-index: 1; }
-#templateOverlay { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; object-fit: fill; display: none; }
 
-.photo-box { position: absolute; overflow: hidden; background: #000; cursor: move; }
-
-/* PERBAIKAN SINTAKS PHOTO-BOX IMG */
-.photo-box img {
-    position: absolute;
-    width: auto;
-    height: auto;
-    max-width: none;
-    max-height: none;
-    transform-origin: center;
-    image-rendering: auto;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    transform: translateZ(0);
-}
-
-.remove-photo-btn {
-    position: absolute; top: 8px; right: 8px; width: 26px; height: 26px;
-    background: var(--danger); color: white; border: 2px solid white;
-    border-radius: 50%; font-size: 16px; font-weight: bold; cursor: pointer;
-    z-index: 999; display: none; align-items: center; justify-content: center;
-}
-
-.photo-box:hover .remove-photo-btn { display: flex; }
-
-/* --- SETTING PRINT EPSON L8050 (4R) --- */
-@media print {
-    @page {
-        size: 102mm 152mm;
-        margin: 0;
-    }
-    body * { visibility: hidden; }
-    #captureArea, #captureArea * { visibility: visible; }
-    #captureArea {
-        position: fixed;
-        left: 0; top: 0;
-        width: 102mm;
-        height: 152mm;
-        box-shadow: none !important;
-        transform: scale(1) !important;
-        z-index: 9999;
-    }
-    .remove-photo-btn { display: none !important; }
+/* PERBAIKAN OVERLAY TEMPLATE */
+#templateOverlay { 
+    position: absolute; 
+    inset: 0; 
+    width: 100%; 
+    height: 100%; 
+    z-index: 10; 
+    pointer-events: none; 
+    object-fit: fill; 
+    display: none; /* Akan diubah menjadi 'block' via JS saat gambar dimuat */
 }
