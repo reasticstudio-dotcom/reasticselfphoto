@@ -6,73 +6,70 @@ let activeImg = null;
 let isDragging = false;
 let startX, startY, initX, initY;
 
-// SCAN TEMPLATE ENGINE
+// SCAN TEMPLATE ENGINE - FIXED
 document.getElementById('magicScan').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-        const img = new Image();
-        img.src = event.target.result;
-        img.onload = () => {
-            photoContainer.innerHTML = '';
-            templateOverlay.src = img.src;
-            templateOverlay.style.display = 'block';
-            detectTransparentAreas(img);
-        };
-    };
+
     const url = URL.createObjectURL(file);
+    const img = new Image();
 
-const img = new Image();
+    img.onload = () => {
+        photoContainer.innerHTML = '';
+        templateOverlay.src = img.src;
+        templateOverlay.style.display = 'block';
+        detectTransparentAreas(img);
+        URL.revokeObjectURL(url);
+    };
 
-img.onload = () => {
-
-    ...
-
-    URL.revokeObjectURL(url);
-
-};
-
-img.src = url;
+    img.src = url;
 });
 
+// DETEKSI AREA TRANSPARAN - FIXED (Inisialisasi data pixel & array pelacak)
 function detectTransparentAreas(imgSource) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     canvas.width = imgSource.naturalWidth;
-canvas.height = imgSource.naturalHeight;
+    canvas.height = imgSource.naturalHeight;
 
-ctx.drawImage(
-    imgSource,
-    0,
-    0,
-    imgSource.naturalWidth,
-    imgSource.naturalHeight
-);
+    ctx.drawImage(imgSource, 0, 0, canvas.width, canvas.height);
 
-const WIDTH = canvas.width;
-const HEIGHT = canvas.height;
+    const WIDTH = canvas.width;
+    const HEIGHT = canvas.height;
+
+    // Ambil data piksel RGBA untuk mendeteksi transparansi (Alpha channel)
+    const imgData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
+    const pixelData = imgData.data;
+    const visited = new Uint8Array(WIDTH * HEIGHT);
 
     for (let y = 0; y < HEIGHT; y += 4) {
         for (let x = 0; x < WIDTH; x += 4) {
             const idx = (y * WIDTH + x) * 4;
+            
+            // Jika piksel transparan (Alpha < 50) dan belum dikunjungi
             if (pixelData[idx + 3] < 50 && !visited[y * WIDTH + x]) {
                 let xMin = x, xMax = x, yMin = y, yMax = y;
                 let stack = [[x, y]];
                 visited[y * WIDTH + x] = 1;
+                
                 while(stack.length > 0) {
                     let [cx, cy] = stack.pop();
                     xMin = Math.min(xMin, cx); xMax = Math.max(xMax, cx);
                     yMin = Math.min(yMin, cy); yMax = Math.max(yMax, cy);
-                    [[cx+4, cy], [cx, cy+4]].forEach(([nx, ny]) => {
+                    
+                    [[cx + 4, cy], [cx, cy + 4]].forEach(([nx, ny]) => {
                         if (nx < WIDTH && ny < HEIGHT && !visited[ny * WIDTH + nx]) {
                             if (pixelData[(ny * WIDTH + nx) * 4 + 3] < 50) {
-                                visited[ny * WIDTH + nx] = 1; stack.push([nx, ny]);
+                                visited[ny * WIDTH + nx] = 1; 
+                                stack.push([nx, ny]);
                             }
                         }
                     });
                 }
-                if ((xMax - xMin) > 25) createPhotoBox(xMin, yMin, (xMax - xMin), (yMax - yMin));
+                
+                if ((xMax - xMin) > 25) {
+                    createPhotoBox(xMin, yMin, (xMax - xMin), (yMax - yMin));
+                }
             }
         }
     }
@@ -82,16 +79,13 @@ function createPhotoBox(x, y, w, h) {
     const box = document.createElement('div');
     box.className = 'photo-box';
     
-    // OFFSET PRESISI: 
-    // Kita kurangi x & y sebesar 1px, dan tambah w & h sebesar 2px
-    // Ini memastikan foto "masuk" sedikit ke bawah area berwarna templat
     const gapFix = 5; 
     
     box.style.cssText = `
         left: ${x - gapFix}px; 
         top: ${y - gapFix}px; 
-        width: ${w + (gapFix * 3)}px; 
-        height: ${h + (gapFix * 3)}px;
+        width: ${w + (gapFix * 2)}px; 
+        height: ${h + (gapFix * 2)}px;
     `;
     
     box.onclick = (e) => {
@@ -108,13 +102,15 @@ function triggerImageUpload(box) {
     input.type = 'file';
     input.accept = 'image/*';
     input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
         const reader = new FileReader();
         reader.onload = (ev) => {
             box.innerHTML = '';
             const img = document.createElement('img');
             img.src = ev.target.result;
 
-            // --- OTOMATIS PRESET CLEAN WHITE ---
             img.dataset.scale = 1; 
             img.dataset.bright = 115; 
             img.dataset.contrast = 110; 
@@ -138,7 +134,7 @@ function triggerImageUpload(box) {
             selectPhoto(img);
             applyStyles(); 
         };
-        reader.readAsDataURL(e.target.files[0]);
+        reader.readAsDataURL(file);
     };
     input.click();
 }
@@ -177,9 +173,12 @@ function applyStyles() {
 window.addEventListener('mousedown', (e) => {
     if (e.target.classList.contains('remove-photo-btn')) return;
     if (e.target.tagName === 'IMG' && e.target.parentElement.classList.contains('photo-box')) {
-        isDragging = true; activeImg = e.target;
-        startX = e.clientX; startY = e.clientY;
-        initX = parseFloat(activeImg.dataset.x); initY = parseFloat(activeImg.dataset.y);
+        isDragging = true; 
+        activeImg = e.target;
+        startX = e.clientX; 
+        startY = e.clientY;
+        initX = parseFloat(activeImg.dataset.x) || 0; 
+        initY = parseFloat(activeImg.dataset.y) || 0;
         selectPhoto(activeImg);
     }
 });
@@ -193,19 +192,15 @@ window.addEventListener('mousemove', (e) => {
 
 window.addEventListener('mouseup', () => isDragging = false);
 
-// PRINT ENGINE
+// PRINT ENGINE - FIXED
 document.getElementById('printBtn').onclick = () => {
     document.querySelectorAll('.photo-box').forEach(b => b.style.outline = 'none');
     setTimeout(() => {
         window.print();
     }, 500);
+};
 
-const ctx = canvas.getContext("2d");
-
-ctx.imageSmoothingEnabled = true;
-ctx.imageSmoothingQuality = "high";
-    };
-// DOWNLOAD ENGINE
+// DOWNLOAD ENGINE - FIXED
 document.getElementById('downloadBtn').onclick = () => {
     const btn = document.getElementById('downloadBtn');
     btn.innerText = 'PROCESSING...';
@@ -213,31 +208,22 @@ document.getElementById('downloadBtn').onclick = () => {
     xBtns.forEach(b => b.style.display = 'none');
     document.querySelectorAll('.photo-box').forEach(b => b.style.outline = 'none');
 
-const captureArea=document.getElementById("captureArea");
+    const captureArea = document.getElementById("captureArea");
+    const ratio = templateOverlay.naturalWidth / captureArea.clientWidth;
 
-const ratio =
-templateOverlay.naturalWidth /
-captureArea.clientWidth;
+    html2canvas(captureArea, {
+        scale: ratio,
+        useCORS: true,
+        backgroundColor: null,
+        imageTimeout: 0,
+        logging: false
+    }).then(canvas => {
+        const link = document.createElement("a");
+        link.download = `REASTIC_STUDIO_${Date.now()}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
 
-html2canvas(captureArea,{
-    scale:ratio,
-    useCORS:true,
-    backgroundColor:null,
-    imageTimeout:0,
-    logging:false
-}).then(canvas=>{
-
-    const link=document.createElement("a");
-
-    link.download=`REASTIC_STUDIO_${Date.now()}.png`;
-
-    link.href=canvas.toDataURL("image/png");
-
-    link.click();
-
-    btn.innerText="💾 SIMPAN HASIL HD";
-
-    xBtns.forEach(b=>b.style.display="flex");
-
-});
+        btn.innerText = "💾 SIMPAN HASIL HD";
+        xBtns.forEach(b => b.style.display = "flex");
+    });
 };
