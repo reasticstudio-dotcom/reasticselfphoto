@@ -49,37 +49,36 @@ body {
 .print-btn { background: #ffffff; color: #000; }
 .print-btn:hover { background: #e0e0e0; }
 
-.viewport { flex: 1; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, #1a1a1c 0%, #0a0a0c 100%); }
+.viewport { flex: 1; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, #1a1a1c 0%, #0a0a0c 100%); overflow: auto; }
 
+/* PERBAIKAN SINTAKS CANVAS-PRINT */
 .canvas-print {
     position: relative;
-    .canvas-print{
-    width:1200px;
-    height:1800px;
-    transform:scale(.32);
-    transform-origin:top left;
-}; /* Rasio 4R */
+    width: 1200px;
+    height: 1800px;
+    transform: scale(0.32);
+    transform-origin: center center; /* Diubah ke center agar posisinya pas di tengah viewport */
     background: #fff;
     box-shadow: 0 50px 100px -20px rgba(0,0,0,0.7);
 }
 
 #photoContainer { position: absolute; inset: 0; z-index: 1; }
-#templateOverlay { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; object-fit: fill; }
+#templateOverlay { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; object-fit: fill; display: none; }
 
 .photo-box { position: absolute; overflow: hidden; background: #000; cursor: move; }
+
+/* PERBAIKAN SINTAKS PHOTO-BOX IMG */
 .photo-box img {
- .photo-box img{
-    position:absolute;
-    width:auto;
-    height:auto;
-    max-width:none;
-    max-height:none;
-    transform-origin:center;
-}
-    image-rendering:auto;
-backface-visibility:hidden;
--webkit-backface-visibility:hidden;
-transform:translateZ(0);
+    position: absolute;
+    width: auto;
+    height: auto;
+    max-width: none;
+    max-height: none;
+    transform-origin: center;
+    image-rendering: auto;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform: translateZ(0);
 }
 
 .remove-photo-btn {
@@ -105,6 +104,7 @@ transform:translateZ(0);
         width: 102mm;
         height: 152mm;
         box-shadow: none !important;
+        transform: scale(1) !important;
         z-index: 9999;
     }
     .remove-photo-btn { display: none !important; }
