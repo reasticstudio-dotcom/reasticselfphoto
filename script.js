@@ -25,7 +25,7 @@ document.getElementById('magicScan').addEventListener('change', function(e) {
     img.src = url;
 });
 
-// MULTI-DIRECTIONAL FLOOD FILL ENGINE (Lebih Fleksibel untuk Bentuk Lengkung/Hati)
+// HIGH-PRECISION GRID BOUNDING BOX ENGINE (Deteksi Rapi & Pas Kotak)
 function detectTransparentAreas(imgSource) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -39,51 +39,63 @@ function detectTransparentAreas(imgSource) {
 
     const imgData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
     const pixelData = imgData.data;
+    
+    // Array untuk menandai piksel yang sudah diproses
     const visited = new Uint8Array(WIDTH * HEIGHT);
-
-    // Langkah pemindaian (Semakin kecil semakin presisi, optimal di angka 2-4)
+    
+    // Toleransi Alpha: Di bawah 150 dianggap lubang transparan (sangat aman untuk efek bayangan/blur di pinggir templat)
+    const alphaThreshold = 150; 
     const step = 2; 
-    // Ambang batas transparansi (Diperlonggar ke 120 agar piksel semi-transparan/blur ikut terbaca)
-    const alphaThreshold = 120; 
 
     for (let y = 0; y < HEIGHT; y += step) {
         for (let x = 0; x < WIDTH; x += step) {
             const idx = (y * WIDTH + x) * 4;
             
+            // Jika menemukan piksel transparan yang belum diperiksa
             if (pixelData[idx + 3] < alphaThreshold && !visited[y * WIDTH + x]) {
-                let xMin = x, xMax = x, yMin = y, yMax = y;
-                let stack = [[x, y]];
+                
+                // Cari batas terluar (Bounding Box)
+                let xMin = x, xMax = x;
+                let yMin = y, yMax = y;
+                
+                let queue = [[x, y]];
                 visited[y * WIDTH + x] = 1;
                 
-                while (stack.length > 0) {
-                    let [cx, cy] = stack.pop();
-                    xMin = Math.min(xMin, cx); xMax = Math.max(xMax, cx);
-                    yMin = Math.min(yMin, cy); yMax = Math.max(yMax, cy);
+                // Kumpulkan seluruh area transparan yang tersambung
+                while (queue.length > 0) {
+                    let [cx, cy] = queue.shift();
                     
-                    // Ekspedisi 8 Arah Mata Angin (Mencari celah lengkungan ke atas, bawah, kiri, kanan, & diagonal)
-                    const directions = [
-                        [cx + 4, cy], [cx - 4, cy], [cx, cy + 4], [cx, cy - 4],
-                        [cx + 4, cy + 4], [cx - 4, cy + 4], [cx + 4, cy - 4], [cx - 4, cy - 4]
+                    if (cx < xMin) xMin = cx;
+                    if (cx > xMax) xMax = cx;
+                    if (cy < yMin) yMin = cy;
+                    if (cy > yMax) yMax = cy;
+                    
+                    // Cek 4 arah mata angin (Kanan, Kiri, Bawah, Atas) dengan jangkauan lompatan 4 piksel agar cepat & efisien
+                    const neighbors = [
+                        [cx + 4, cy], [cx - 4, cy], [cx, cy + 4], [cx, cy - 4]
                     ];
-
-                    for (let i = 0; i < directions.length; i++) {
-                        const [nx, ny] = directions[i];
+                    
+                    for (let i = 0; i < neighbors.length; i++) {
+                        const [nx, ny] = neighbors[i];
                         if (nx >= 0 && nx < WIDTH && ny >= 0 && ny < HEIGHT) {
                             const nIdx = ny * WIDTH + nx;
                             if (!visited[nIdx]) {
-                                const pIdx = nIdx * 4;
-                                if (pixelData[pIdx + 3] < alphaThreshold) {
+                                if (pixelData[nIdx * 4 + 3] < alphaThreshold) {
                                     visited[nIdx] = 1;
-                                    stack.push([nx, ny]);
+                                    queue.push([nx, ny]);
                                 }
                             }
                         }
                     }
                 }
                 
-                // Membuat kotak foto jika ukuran area valid
-                if ((xMax - xMin) > 40 && (yMax - yMin) > 40) {
-                    createPhotoBox(xMin, yMin, (xMax - xMin), (yMax - yMin));
+                // Hitung dimensi akhir kotak hasil deteksi
+                const boxWidth = xMax - xMin;
+                const boxHeight = yMax - yMin;
+                
+                // Validasi ukuran minimum (Mengabaikan noise piksel kecil di bawah 50px)
+                if (boxWidth > 50 && boxHeight > 50) {
+                    createPhotoBox(xMin, yMin, boxWidth, boxHeight);
                 }
             }
         }
@@ -94,8 +106,8 @@ function createPhotoBox(x, y, w, h) {
     const box = document.createElement('div');
     box.className = 'photo-box';
     
-    // GAP FIX: Diperbesar sedikit agar ujung foto masuk lebih dalam ke bagian belakang templat
-    const gapFix = 8; 
+    // GAP FIX PRESETS: Foto otomatis masuk 6 piksel ke belakang frame berwarna agar tidak bocor putih di pinggirannya
+    const gapFix = 6; 
     
     box.style.cssText = `
         left: ${x - gapFix}px; 
