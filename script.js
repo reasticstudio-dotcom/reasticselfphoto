@@ -6,8 +6,8 @@ let activeImg = null;
 let isDragging = false;
 let startX, startY, initX, initY;
 
-// STEP 1: DETEKSI TITIK KOTAK DARI LAYOUT HITAM
-document.getElementById('layoutScan').addEventListener('change', function(e) {
+// SCAN TEMPLATE ENGINE (Satu Input untuk Semua)
+document.getElementById('magicScan').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -15,54 +15,51 @@ document.getElementById('layoutScan').addEventListener('change', function(e) {
     const img = new Image();
 
     img.onload = () => {
-        photoContainer.innerHTML = ''; // Reset slot sebelumnya
-        detectBlackBoxes(img);
+        photoContainer.innerHTML = ''; // Reset slot lama
+        templateOverlay.src = img.src;
+        templateOverlay.style.display = 'block';
+        
+        // Deteksi area transparan dan bungkus jadi kotak persegi
+        detectTransparentAreas(img);
         URL.revokeObjectURL(url);
-        alert("Layout berhasil dipindai! Silakan upload Template Overlay sekarang.");
     };
+
     img.src = url;
 });
 
-// STEP 2: PASANG TEMPLATE CANTIK DI ATASNYA
-document.getElementById('magicScan').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const url = URL.createObjectURL(file);
-    templateOverlay.src = url;
-    templateOverlay.style.display = 'block';
-});
-
-// HIGH-PRECISION GRID DETECTOR (Membaca file hitam polos sebagai acuan kotak foto)
-function detectBlackBoxes(imgSource) {
+// HIGH-PRECISION BOUNDING BOX ENGINE FOR CURVED FRAMES
+function detectTransparentAreas(imgSource) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    canvas.width = 1200;  // Paksa ke resolusi kanvas standar (4R)
-    canvas.height = 1800;
     
+    // Gunakan standar dimensi kanvas cetak 4R agar output konsisten
+    canvas.width = 1200;
+    canvas.height = 1800;
+
     ctx.drawImage(imgSource, 0, 0, canvas.width, canvas.height);
+
     const WIDTH = canvas.width;
     const HEIGHT = canvas.height;
 
     const imgData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
     const pixelData = imgData.data;
+    
     const visited = new Uint8Array(WIDTH * HEIGHT);
     
-    const step = 4; // Menghemat pemrosesan performa
+    // Threshold Alpha: Di bawah 180 dianggap lubang transparan (aman untuk efek blur/lace di pinggir frame hati)
+    const alphaThreshold = 180; 
+    const step = 4; // Langkah scan dipercepat untuk efisiensi
 
     for (let y = 0; y < HEIGHT; y += step) {
         for (let x = 0; x < WIDTH; x += step) {
             const idx = (y * WIDTH + x) * 4;
-            const r = pixelData[idx];
-            const g = pixelData[idx+1];
-            const b = pixelData[idx+2];
-            const a = pixelData[idx+3];
             
-            // Jika mendeteksi warna gelap/hitam (R,G,B < 50 dan tidak transparan)
-            if (r < 50 && g < 50 && b < 50 && a > 200 && !visited[y * WIDTH + x]) {
+            // Jika menemukan piksel transparan yang belum diproses
+            if (pixelData[idx + 3] < alphaThreshold && !visited[y * WIDTH + x]) {
                 
                 let xMin = x, xMax = x;
                 let yMin = y, yMax = y;
+                
                 let queue = [[x, y]];
                 visited[y * WIDTH + x] = 1;
                 
@@ -74,8 +71,9 @@ function detectBlackBoxes(imgSource) {
                     if (cy < yMin) yMin = cy;
                     if (cy > yMax) yMax = cy;
                     
+                    // Jangkauan lompatan (12px) diperbesar agar bisa menyeberangi objek lengkung/ornamen di dalam lubang hati
                     const neighbors = [
-                        [cx + 8, cy], [cx - 8, cy], [cx, cy + 8], [cx, cy - 8]
+                        [cx + 12, cy], [cx - 12, cy], [cx, cy + 12], [cx, cy - 12]
                     ];
                     
                     for (let i = 0; i < neighbors.length; i++) {
@@ -83,8 +81,7 @@ function detectBlackBoxes(imgSource) {
                         if (nx >= 0 && nx < WIDTH && ny >= 0 && ny < HEIGHT) {
                             const nIdx = ny * WIDTH + nx;
                             if (!visited[nIdx]) {
-                                const nPix = nIdx * 4;
-                                if (pixelData[nPix] < 50 && pixelData[nPix+3] > 200) {
+                                if (pixelData[nIdx * 4 + 3] < alphaThreshold) {
                                     visited[nIdx] = 1;
                                     queue.push([nx, ny]);
                                 }
@@ -96,10 +93,10 @@ function detectBlackBoxes(imgSource) {
                 const boxWidth = xMax - xMin;
                 const boxHeight = yMax - yMin;
                 
-                // Validasi ukuran box standar photobox
-                if (boxWidth > 100 && boxHeight > 100) {
-                    // Berikan sedikit padding minus (gapFix) agar tepi foto agak masuk ke dalam frame overlay
-                    const gapFix = 4;
+                // Validasi ukuran: Abaikan noise kecil, buat slot jika ukurannya memadai
+                if (boxWidth > 120 && boxHeight > 120) {
+                    // Berikan gapFix ekstra agar tepi kotak masuk sedikit ke dalam frame (tidak bocor putih)
+                    const gapFix = 6;
                     createPhotoBox(xMin - gapFix, yMin - gapFix, boxWidth + (gapFix * 2), boxHeight + (gapFix * 2));
                 }
             }
@@ -237,12 +234,13 @@ window.addEventListener('mousemove', (e) => {
 
 window.addEventListener('mouseup', () => isDragging = false);
 
-// PRINT & DOWNLOAD ENGINE
+// PRINT ENGINE
 document.getElementById('printBtn').onclick = () => {
     document.querySelectorAll('.photo-box').forEach(b => b.style.outline = 'none');
     setTimeout(() => { window.print(); }, 500);
 };
 
+// DOWNLOAD ENGINE
 document.getElementById('downloadBtn').onclick = () => {
     const btn = document.getElementById('downloadBtn');
     btn.innerText = 'PROCESSING...';
